@@ -9,6 +9,9 @@
             width: 100%;
             height: 300px;
         }
+        #samplingRate {
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -18,14 +21,18 @@
     <div id="chart-container">
         <canvas id="magnetometerChart"></canvas>
     </div>
+    <div id="samplingRate">サンプリングレート: <span id="rate">0</span> Hz</div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         let accelerometer, magnetometer;
         let accelData = [], magData = [];
         let isMeasuring = false;
+        let sampleCount = 0;
+        let startTime;
 
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
+        const rateDisplay = document.getElementById('rate');
         const ctx = document.getElementById('magnetometerChart').getContext('2d');
         const chart = new Chart(ctx, {
             type: 'line',
@@ -71,6 +78,8 @@
         });
 
         function startSensors() {
+            sampleCount = 0;
+            startTime = Date.now();
             if ('Accelerometer' in window) {
                 accelerometer = new Accelerometer({ frequency: 60 });
                 accelerometer.addEventListener('reading', () => {
@@ -95,6 +104,7 @@
                         z: magnetometer.z,
                         timestamp: Date.now()
                     });
+                    sampleCount++;
                     updateChart();
                 });
                 magnetometer.start();
@@ -102,6 +112,7 @@
                 alert('Magnetometer not supported');
             }
 
+            setInterval(updateSamplingRate, 1000);
             setInterval(processMagData, 1000);
         }
 
@@ -118,6 +129,13 @@
             chart.data.datasets[1].data = recentData.map(d => d.y);
             chart.data.datasets[2].data = recentData.map(d => d.z);
             chart.update();
+        }
+
+        function updateSamplingRate() {
+            const now = Date.now();
+            const elapsedTime = (now - startTime) / 1000;
+            const rate = (sampleCount / elapsedTime).toFixed(2);
+            rateDisplay.textContent = rate;
         }
 
         function processMagData() {
